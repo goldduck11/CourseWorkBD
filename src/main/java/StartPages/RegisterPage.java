@@ -1,9 +1,14 @@
 package StartPages;
 
+import Connect.MyConnection;
+
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.Statement;
 
 public class RegisterPage extends JFrame {
 
@@ -78,14 +83,29 @@ public class RegisterPage extends JFrame {
 
         JButton registerButton = new JButton("Зарегистрироваться");
         registerButton.addActionListener(new ActionListener() {
+            @lombok.SneakyThrows
             @Override
             public void actionPerformed(ActionEvent e) {
                 // Обработка регистрации
                 String login = loginField.getText();
                 String password = new String(passwordField.getPassword());
                 String role = roleField.getText();
+                if (login.isEmpty() && password.isEmpty() && role.isEmpty()) {
+                    JOptionPane.showMessageDialog(RegisterPage.this, "Поля должны быть заполнены!");
+                    return;
+                }
                 // Добавьте здесь код для регистрации пользователя
-                JOptionPane.showMessageDialog(RegisterPage.this, "Вы зарегистрированы!");
+                String insertQuery = "INSERT INTO public.user (login, password, role) VALUES (?, ?, ?)";
+                PreparedStatement statement = MyConnection.getConnection().prepareStatement(insertQuery);
+                statement.setString(1, login);      // Устанавливаем значение для параметра login
+                statement.setString(2, password);   // Устанавливаем значение для параметра password
+                statement.setString(3, role);       // Устанавливаем значение для параметра role
+
+                int rowsAffected = statement.executeUpdate();
+                if (rowsAffected > 0)
+                    JOptionPane.showMessageDialog(RegisterPage.this, "Вы успешно зарегистрировались!");
+                else
+                    JOptionPane.showMessageDialog(RegisterPage.this, "Данные не были добавлены в базу!");
             }
         });
         buttonPanel.add(registerButton); // Добавляем кнопку "Зарегистрироваться" на панель

@@ -13,7 +13,7 @@ public class AdminWindow extends JFrame {
     private DefaultListModel<String> warehousesModel;
 
     public AdminWindow() {
-        super("Панель администратора");hui
+        super("Панель администратора");
         initComponents();
 
         // Установка параметров окна
@@ -101,10 +101,5 @@ public class AdminWindow extends JFrame {
         panel.add(scrollPane, BorderLayout.CENTER);
 
         return panel;
-    }
-
-    public static void main(String[] args) {
-        // Создание и отображение окна панели администратора
-        SwingUtilities.invokeLater(AdminWindow::new);
     }
 }

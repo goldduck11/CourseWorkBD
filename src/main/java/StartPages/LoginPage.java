@@ -1,9 +1,19 @@
 package StartPages;
 
+import Connect.MyConnection;
+import lombok.SneakyThrows;
+import org.hibernate.Session;
+import org.hibernate.SessionFactory;
+import org.hibernate.cfg.Configuration;
+
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.sql.ResultSet;
+import java.util.List;
+
+import org.example.Entity.User;
 
 public class LoginPage extends JFrame {
 
@@ -71,10 +81,38 @@ public class LoginPage extends JFrame {
         JButton loginButton = new JButton("Вход");
         loginButton.setPreferredSize(new Dimension(80, 30));
         loginButton.addActionListener(new ActionListener() {
+            @SneakyThrows
             @Override
             public void actionPerformed(ActionEvent e) {
                 String login = loginField.getText();
                 String password = new String(passwordField.getPassword());
+                SessionFactory sessionFactory = new Configuration().configure().buildSessionFactory();
+
+                // Открытие сессии
+                Session session = sessionFactory.openSession();
+                    // Начало транзакции
+                session.beginTransaction();
+
+                // Получение списка всех пользователей из таблицы
+                String hql = "FROM User WHERE login = :login AND password = :password";
+                List<User> userList = session.createQuery(hql, User.class)
+                        .setParameter("login", login)
+                        .setParameter("password", password)
+                        .list();
+
+                // Вывод результатов запроса
+                if (!userList.isEmpty()) {
+                    System.out.println("Найденные пользователи:");
+                    for (User user : userList) {
+                        System.out.println("User ID: " + user.getId() + ", Username: " + user.getLogin());
+                    }
+                } else {
+                    System.out.println("Пользователи с именем '" + login + "' не найдены.");
+                }
+
+                // Завершение транзакции
+                session.getTransaction().commit();
+                sessionFactory.close();
                 JOptionPane.showMessageDialog(LoginPage.this, "Вы пытаетесь войти...");
             }
         });
