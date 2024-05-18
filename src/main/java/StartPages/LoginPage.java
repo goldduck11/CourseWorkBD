@@ -1,19 +1,16 @@
 package StartPages;
 
-import Connect.MyConnection;
-import lombok.SneakyThrows;
+import Connect.HibernateUtil;
+import MainClasses.AdminWindow;
+import MainClasses.UserWindow;
+import org.example.Entity.User;
 import org.hibernate.Session;
-import org.hibernate.SessionFactory;
-import org.hibernate.cfg.Configuration;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.sql.ResultSet;
 import java.util.List;
-
-import org.example.Entity.User;
 
 public class LoginPage extends JFrame {
 
@@ -81,17 +78,13 @@ public class LoginPage extends JFrame {
         JButton loginButton = new JButton("Вход");
         loginButton.setPreferredSize(new Dimension(80, 30));
         loginButton.addActionListener(new ActionListener() {
-            @SneakyThrows
+
             @Override
             public void actionPerformed(ActionEvent e) {
                 String login = loginField.getText();
                 String password = new String(passwordField.getPassword());
-                SessionFactory sessionFactory = new Configuration().configure().buildSessionFactory();
 
-                // Открытие сессии
-                Session session = sessionFactory.openSession();
-                    // Начало транзакции
-                session.beginTransaction();
+                Session session = HibernateUtil.getSession();
 
                 // Получение списка всех пользователей из таблицы
                 String hql = "FROM User WHERE login = :login AND password = :password";
@@ -103,8 +96,17 @@ public class LoginPage extends JFrame {
                 // Вывод результатов запроса
                 if (!userList.isEmpty()) {
                     System.out.println("Найденные пользователи:");
-                    for (User user : userList) {
-                        System.out.println("User ID: " + user.getId() + ", Username: " + user.getLogin());
+                    if (userList.size() == 1) {
+                        if (userList.get(0).getRole().equalsIgnoreCase("admin")) {
+                            dispose();
+                            new AdminWindow();
+                        }
+                        if (userList.get(0).getRole().equalsIgnoreCase("user")) {
+                            dispose();
+                            new UserWindow();
+                        }
+                    } else {
+                        System.out.println("Найдено более 1 пользователя");
                     }
                 } else {
                     System.out.println("Пользователи с именем '" + login + "' не найдены.");
@@ -112,7 +114,7 @@ public class LoginPage extends JFrame {
 
                 // Завершение транзакции
                 session.getTransaction().commit();
-                sessionFactory.close();
+                session.close();
                 JOptionPane.showMessageDialog(LoginPage.this, "Вы пытаетесь войти...");
             }
         });

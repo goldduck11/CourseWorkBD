@@ -1,5 +1,6 @@
 package org.example;
 
+import Connect.HibernateUtil;
 import StartPages.LoginPage;
 
 import javax.swing.*;
@@ -10,6 +11,7 @@ public class Main {
         SwingUtilities.invokeLater(new Runnable() {
             @Override
             public void run() {
+                HibernateUtil.getSessionFactory();
                 new LoginPage();
             }
         });
