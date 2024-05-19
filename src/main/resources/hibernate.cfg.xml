@@ -18,5 +18,12 @@
 
         <!-- Маппинг классов Entity -->
         <mapping class="org.example.Entity.User"/> <!-- Укажите здесь путь к вашему классу Entity -->
+        <mapping class="org.example.Entity.Product"/>
+        <mapping class="org.example.Entity.Storage"/>
+        <mapping class="org.example.Entity.StorageProduct"/>
+        <mapping class="org.example.Entity.StorageProductId"/>
+        <mapping class="org.example.Entity.Requisition"/>
+        <mapping class="org.example.Entity.RequisitionProduct"/>
+        <mapping class="org.example.Entity.RequisitionProductId"/>
     </session-factory>
 </hibernate-configuration>
