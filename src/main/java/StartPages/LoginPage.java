@@ -103,7 +103,7 @@ public class LoginPage extends JFrame {
                         }
                         if (userList.get(0).getRole().equalsIgnoreCase("user")) {
                             dispose();
-                            new UserWindow();
+                            new UserWindow(userList.get(0));
                         }
                     } else {
                         System.out.println("Найдено более 1 пользователя");
