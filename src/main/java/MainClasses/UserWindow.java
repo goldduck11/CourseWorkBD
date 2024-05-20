@@ -50,7 +50,7 @@ public class UserWindow extends JFrame {
             cartModel.clear();
             cart.setModel(cartModel);
             DecimalFormat df = new DecimalFormat("#.##");
-            hibernateUtil.createRequisitionFromCart(productList, user, Double.parseDouble(df.format(Double.parseDouble(total.getText()))));
+            hibernateUtil.createRequisitionFromCart(productList, user, Double.parseDouble(total.getText().replace(",", ".")));
         });
     }
 

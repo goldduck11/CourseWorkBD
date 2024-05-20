@@ -2,11 +2,14 @@ package MainClasses;
 
 import Connect.MyConnection;
 import lombok.SneakyThrows;
+import lombok.extern.java.Log;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -21,7 +24,7 @@ public class AdminWindow extends JFrame {
     private DefaultListModel<String> productsModel;
     private DefaultListModel<String> ordersModel;
     private DefaultListModel<String> suppliersModel;
-    private DefaultListModel<String> warehousesModel;
+    private DefaultListModel<String> storageModel;
 
     public AdminWindow() {
         super("Панель администратора");
@@ -34,6 +37,7 @@ public class AdminWindow extends JFrame {
         setVisible(true);
     }
 
+    @SneakyThrows
     private void initComponents() {
         JPanel mainPanel = new JPanel(new GridLayout(1, 4, 10, 10));
         mainPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
@@ -42,32 +46,56 @@ public class AdminWindow extends JFrame {
         productsModel = new DefaultListModel<>();
         ordersModel = new DefaultListModel<>();
         suppliersModel = new DefaultListModel<>();
-        warehousesModel = new DefaultListModel<>();
+        storageModel = new DefaultListModel<>();
 
         // Добавление элементов по умолчанию в списки (для демонстрации)
-        productsModel.addElement("Товар 1");
-        productsModel.addElement("Товар 2");
-        ordersModel.addElement("Заказ 1");
-        ordersModel.addElement("Заказ 2");
-        suppliersModel.addElement("Поставщик 1");
-        suppliersModel.addElement("Поставщик 2");
-        warehousesModel.addElement("Склад 1");
-        warehousesModel.addElement("Склад 2");
+        displayProductData();
+        displayOrderData();
+        displaySuppliersData();
+        displayStorageData();
 
         // Создание списков
         JList<String> productsList = new JList<>(productsModel);
         JList<String> ordersList = new JList<>(ordersModel);
         JList<String> suppliersList = new JList<>(suppliersModel);
-        JList<String> warehousesList = new JList<>(warehousesModel);
+        JList<String> storageList = new JList<>(storageModel);
 
         // Добавление списков на панель
         mainPanel.add(createListPanel("Товары", productsList));
         mainPanel.add(createListPanel("Заказы", ordersList));
         mainPanel.add(createListPanel("Поставщики", suppliersList));
-        mainPanel.add(createListPanel("Склады", warehousesList));
+        mainPanel.add(createListPanel("Склады", storageList));
 
         // Добавление основной панели на окно
         add(mainPanel);
+    }
+
+    private void displayStorageData() throws SQLException {
+        ResultSet rs = MyConnection.getStatement().executeQuery("select * from public.storage");
+        while (rs.next()) {
+            storageModel.addElement(rs.getString("location"));
+        }
+    }
+
+    private void displaySuppliersData() throws SQLException {
+        ResultSet rs = MyConnection.getStatement().executeQuery("select * from public.supplier");
+        while (rs.next()) {
+            suppliersModel.addElement(rs.getString("name"));
+        }
+    }
+
+    private void displayOrderData() throws SQLException {
+        ResultSet rs = MyConnection.getStatement().executeQuery("select * from public.requisition");
+        while (rs.next()) {
+            ordersModel.addElement(rs.getString("id"));
+        }
+    }
+
+    private void displayProductData() throws SQLException {
+        ResultSet rs = MyConnection.getStatement().executeQuery("select * from public.product");
+        while (rs.next()) {
+            productsModel.addElement(rs.getString("name"));
+        }
     }
 
     private JPanel createListPanel(String title, JList<String> list) {
@@ -86,15 +114,22 @@ public class AdminWindow extends JFrame {
             public void actionPerformed(ActionEvent e) {
                 if (titleLabel.getText().equals("Товары")) {
                     productAdd();
+                    AdminWindow.this.initComponents();
+                    return;
                 }
                 if (titleLabel.getText().equals("Заказы")) {
                     orderAdd();
+                    AdminWindow.this.initComponents();
+                    return;
                 }
                 if (titleLabel.getText().equals("Поставщики")) {
                     requsitionAdd();
+                    AdminWindow.this.initComponents();
+                    return;
                 }
                 if (titleLabel.getText().equals("Склады")) {
                     supplierAdd();
+                    AdminWindow.this.initComponents();
                 }
             }
         });
@@ -104,25 +139,209 @@ public class AdminWindow extends JFrame {
             @Override
             public void actionPerformed(ActionEvent e) {
                 if (titleLabel.getText().equals("Товары")) {
-                    
+                    delateDataFromBD(list, "DELETE FROM public.product WHERE name = ?");
                 }
                 if (titleLabel.getText().equals("Заказы")) {
+                    delateDataFromBD(list, "DELETE FROM public.requisition WHERE name = ?");
                 }
                 if (titleLabel.getText().equals("Поставщики")) {
+                    delateDataFromBD(list, "DELETE FROM public.supplier WHERE name = ?");
                 }
                 if (titleLabel.getText().equals("Склады")) {
+                    delateDataFromBD(list, "DELETE FROM public.storage WHERE name = ?");
                 }
             }
         });
+
         buttonPanel.add(addButton);
         buttonPanel.add(deleteButton);
         panel.add(buttonPanel, BorderLayout.SOUTH);
 
+        list.addMouseListener(new MouseAdapter() {
+            @SneakyThrows
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (e.getClickCount() == 2) {
+                    int index = list.locationToIndex(e.getPoint());
+                    if (index >= 0) {
+                        // Получаем выбранный элемент
+                        String item = list.getModel().getElementAt(index);
+                        if (titleLabel.getText().equals("Товары")) {
+                            doubleClickFromProduct(item);
+                        } else if (titleLabel.getText().equals("Заказы")) {
+                            doubleClickFromOrder(item);
+                        } else if (titleLabel.getText().equals("Поставщики")) {
+                            doubleClickFromSupplier(item);
+                        } else if (titleLabel.getText().equals("Склады")) {
+                            doubleClickFromStorage(item);
+                        }
+                    }
+                }
+            }
+        });
         // Добавление списка на панель
         JScrollPane scrollPane = new JScrollPane(list);
         panel.add(scrollPane, BorderLayout.CENTER);
 
         return panel;
+    }
+
+    private void doubleClickFromStorage(String item) throws SQLException {
+        ResultSet rs = MyConnection.getStatement().executeQuery("select * from public.storage where location = '" + item + "'");
+        if (!rs.next()) {
+            JOptionPane.showMessageDialog(AdminWindow.this, "Данные товара не найдены!");
+        }
+        Long capacity = rs.getLong("capacity");
+        Long occupancy = rs.getLong("occupancy");
+
+        JPanel panel = new JPanel(new GridLayout(5, 2, 5, 5)); // сетка для n строк и 2 столбца
+
+        panel.add(new Label("Местонахождение склада: "));
+        panel.add(new Label(item));
+
+        panel.add(new Label("Вместимость: "));
+        panel.add(new Label(String.valueOf(capacity)));
+
+        panel.add(new Label("Заполненность: "));
+        panel.add(new Label(String.valueOf(occupancy)));
+
+        JOptionPane.showMessageDialog(AdminWindow.this, panel);
+    }
+
+    private void doubleClickFromSupplier(String item) throws SQLException {
+        ResultSet rs = MyConnection.getStatement().executeQuery("select location, contact_information from public.requisition where name = '" + item + "'");
+        if (!rs.next()) {
+            JOptionPane.showMessageDialog(AdminWindow.this, "Данные поставщика не найдены");
+        }
+        String location = rs.getString("location");
+        String contact_info = rs.getString("contact_information");
+        ArrayList<Long> productsIds = new ArrayList<>();
+        rs = MyConnection.getStatement().executeQuery("select product_id from public.product where name = '" + item + "'");
+        while (rs.next()) {
+            productsIds.add(rs.getLong(1));
+        }
+
+        JPanel panel = new JPanel(new GridLayout(4 + productsIds.size() * 4, 2, 5, 5)); // сетка для n строк и 2 столбца
+        panel.add(new Label("Имя поставщика: "));
+        panel.add(new Label(item));
+
+        panel.add(new Label("Местоположение поставщика: "));
+        panel.add(new Label(location));
+
+        panel.add(new Label("Контактная инфрмация: "));
+        panel.add(new Label(contact_info));
+
+        panel.add(new Label());
+        panel.add(new Label());
+
+        panel.add(new Label("Информация о товарах: "));
+        panel.add(new Label());
+
+        for (int i = 0; i < productsIds.size(); i++) {
+            rs = MyConnection.getStatement().executeQuery("select * from public.product where id = '" + productsIds.get(i) + "'");
+
+            if (!rs.next()) {
+                JOptionPane.showMessageDialog(AdminWindow.this, "Данные товара не найдены!");
+            }
+            String name = rs.getString("name");
+            Double price = rs.getDouble("price");
+            Long quantity = rs.getLong("quantity");
+
+            panel.add(new Label("Название товара: "));
+            panel.add(new Label(name));
+
+            panel.add(new Label("Количество товара: "));
+            panel.add(new Label(quantity.toString()));
+
+            panel.add(new Label("Цена товара(за штуку): "));
+            panel.add(new Label(String.valueOf(price)));
+
+            panel.add(new Label());
+            panel.add(new Label());
+        }
+
+        JOptionPane.showMessageDialog(AdminWindow.this, panel);
+    }
+
+    private void doubleClickFromProduct(String item) throws SQLException {
+        ResultSet rs = MyConnection.getStatement().executeQuery("select * from public.product where name = '" + item + "'");
+        if (!rs.next()) {
+            JOptionPane.showMessageDialog(AdminWindow.this, "Данные товара не найдены!");
+        }
+        Double price = rs.getDouble("price");
+        Long quantity = rs.getLong("quantity");
+
+        JPanel panel = new JPanel(new GridLayout(5, 2, 5, 5)); // сетка для n строк и 2 столбца
+        panel.add(new Label("Название товара: "));
+        panel.add(new Label(item));
+
+        panel.add(new Label("Количество товара: "));
+        panel.add(new Label(quantity.toString()));
+
+        panel.add(new Label("Цена товара(за штуку): "));
+        panel.add(new Label(String.valueOf(price)));
+
+        JOptionPane.showMessageDialog(AdminWindow.this, panel);
+    }
+
+    private void doubleClickFromOrder(String item) throws SQLException {
+        ResultSet rs = MyConnection.getStatement().executeQuery("select * from public.requisition_product where requisition_id = '" + item + "'");
+        if (!rs.next()) {
+            JOptionPane.showMessageDialog(AdminWindow.this, "Данные заказа не найдены!");
+        }
+        Long product_id = rs.getLong("product_id");
+        Long quantity = rs.getLong("quantity");
+        Double price = rs.getDouble("price");
+        rs = MyConnection.getStatement().executeQuery("select user_id from public.requisition where id = '" + item + "'");
+        Long user_id = rs.next() ? rs.getLong("user_id") : null;
+
+        if (user_id == null) {
+            JOptionPane.showMessageDialog(AdminWindow.this, "Данные заказа не найдены!");
+        }
+
+        rs = MyConnection.getStatement().executeQuery("select login from public.user where id = '" + user_id + "'");
+        String login = rs.next() ? rs.getString("login") : null;
+
+        if (user_id == null) {
+            JOptionPane.showMessageDialog(AdminWindow.this, "Данные пользователя не найдены!");
+        }
+
+        rs = MyConnection.getStatement().executeQuery("select name from public.product where id = '" + product_id + "'");
+        String productName = rs.next() ? rs.getString("name") : null;
+        if (productName == null) {
+            JOptionPane.showMessageDialog(AdminWindow.this, "Данные товара не найдены!");
+        }
+
+        JPanel panel = new JPanel(new GridLayout(5, 2, 5, 5)); // сетка для n строк и 2 столбца
+        panel.add(new Label("Пользователь: "));
+        panel.add(new Label(login));
+
+        panel.add(new Label("Номер продукта: "));
+        panel.add(new Label(product_id.toString()));
+
+        panel.add(new Label("Название товара: "));
+        panel.add(new Label(productName));
+
+        panel.add(new Label("Количество товара: "));
+        panel.add(new Label(quantity.toString()));
+
+        panel.add(new Label("Общая сумма заказа: "));
+        panel.add(new Label(price.toString()));
+
+        JOptionPane.showMessageDialog(AdminWindow.this, panel);
+    }
+
+    private static void delateDataFromBD(JList<String> list, String deleteSQL) throws SQLException {
+        String selectedValue = list.getSelectedValue();
+        PreparedStatement preparedStatement = MyConnection.getConnection().prepareStatement(deleteSQL);
+
+        // Set the value for the department parameter
+        preparedStatement.setString(1, selectedValue);
+
+        // Execute the delete statement
+        int rowsAffected = preparedStatement.executeUpdate();
+
+        System.out.println("Deleted " + rowsAffected + " rows from the employees table.");
     }
 
     private void supplierAdd() throws SQLException {
