@@ -1,15 +1,25 @@
 package MainClasses;
 
+import Connect.HibernateUtil;
 import Connect.MyConnection;
+import Graph.PieGraph;
 import lombok.SneakyThrows;
-import lombok.extern.java.Log;
+import Enum.RequisitionStatus;
+import org.example.Entity.Product;
+import org.hibernate.Session;
+import org.hibernate.SessionFactory;
+
+import org.hibernate.query.Query;
 
 import javax.swing.*;
+import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -41,6 +51,13 @@ public class AdminWindow extends JFrame {
     private void initComponents() {
         JPanel mainPanel = new JPanel(new GridLayout(1, 4, 10, 10));
         mainPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        JMenu menu = new JMenu("Опции");
+        JMenuItem recordButton = new JMenuItem("Получить отчёт");
+        JMenuItem graphButton = new JMenuItem("Отобразить график");
+        menu.add(recordButton);
+        menu.add(graphButton);
+        JMenuBar menuBar = new JMenuBar();
+        menuBar.add(menu);
 
         // Создание моделей для списков
         productsModel = new DefaultListModel<>();
@@ -61,6 +78,7 @@ public class AdminWindow extends JFrame {
         JList<String> storageList = new JList<>(storageModel);
 
         // Добавление списков на панель
+        setJMenuBar(menuBar);
         mainPanel.add(createListPanel("Товары", productsList));
         mainPanel.add(createListPanel("Заказы", ordersList));
         mainPanel.add(createListPanel("Поставщики", suppliersList));
@@ -68,6 +86,37 @@ public class AdminWindow extends JFrame {
 
         // Добавление основной панели на окно
         add(mainPanel);
+
+        graphButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                Session session = HibernateUtil.getSession();
+                List<Product> productsData = session.createQuery("from Product", Product.class).getResultList();
+                SwingUtilities.invokeLater(() -> {
+                    PieGraph pieGraph = new PieGraph(productsData);
+                    pieGraph.setLocationRelativeTo(null);
+                    pieGraph.pack();
+                    pieGraph.setVisible(true);
+                });
+            }
+        });
+
+        recordButton.addActionListener(new ActionListener() {
+
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                Integer index = productsList.getSelectedIndex();
+                if (index == -1) {
+                    JOptionPane.showMessageDialog(AdminWindow.this, "Выберите один из товаров!");
+                    return;
+                }
+                String value = productsList.getSelectedValue();
+                Product product = HibernateUtil.getSession().createQuery("from Product where name = :name", Product.class)
+                        .setParameter("name", value)
+                        .getSingleResult();
+                exportDataToFile(product);
+            }
+        });
     }
 
     private void displayStorageData() throws SQLException {
@@ -292,8 +341,12 @@ public class AdminWindow extends JFrame {
         Long product_id = rs.getLong("product_id");
         Long quantity = rs.getLong("quantity");
         Double price = rs.getDouble("price");
-        rs = MyConnection.getStatement().executeQuery("select user_id from public.requisition where id = '" + item + "'");
-        Long user_id = rs.next() ? rs.getLong("user_id") : null;
+        rs = MyConnection.getStatement().executeQuery("select user_id, status from public.requisition where id = '" + item + "'");
+        if (!rs.next()) {
+            JOptionPane.showMessageDialog(AdminWindow.this, "Данные заказа не найдены");
+        }
+        String status = rs.getString("status");
+        Long user_id = rs.getLong("user_id");
 
         if (user_id == null) {
             JOptionPane.showMessageDialog(AdminWindow.this, "Данные заказа не найдены!");
@@ -328,7 +381,42 @@ public class AdminWindow extends JFrame {
         panel.add(new Label("Общая сумма заказа: "));
         panel.add(new Label(price.toString()));
 
-        JOptionPane.showMessageDialog(AdminWindow.this, panel);
+        if (status.equalsIgnoreCase("НОВАЯ")) {
+
+            String[] options = {"Отпустить товар", "Не отпускать"};
+
+            // Показ диалогового окна с пользовательской панелью и кастомными кнопками
+            int result = JOptionPane.showOptionDialog(
+                    AdminWindow.this,
+                    panel,
+                    "Подробности товара",
+                    JOptionPane.DEFAULT_OPTION,
+                    JOptionPane.PLAIN_MESSAGE,
+                    null,
+                    options,
+                    options[0]
+            );
+
+            // Обработка нажатия кнопок
+            if (result == JOptionPane.OK_OPTION) {
+                int row = MyConnection.getStatement()
+                        .executeUpdate("UPDATE public.requisition SET status = '"
+                                + RequisitionStatus.COMPLETED + "' WHERE id = '" + item + "'");
+                if (row > 0) {
+                    JOptionPane.showMessageDialog(panel, "Отпуск отвара был произведён успешно");
+                }
+            } else if (result == JOptionPane.CANCEL_OPTION) {
+                int row = MyConnection.getStatement()
+                        .executeUpdate("UPDATE public.requisition SET status = '"
+                                + RequisitionStatus.CANCELED + "' WHERE id = '" + item + "'");
+                if (row > 0) {
+                    JOptionPane.showMessageDialog(panel, "Отпуск товара был отменён");
+                }
+            }
+        } else {
+            JOptionPane.showMessageDialog(AdminWindow.this, panel);
+        }
+
     }
 
     private static void delateDataFromBD(JList<String> list, String deleteSQL) throws SQLException {
@@ -342,6 +430,21 @@ public class AdminWindow extends JFrame {
         int rowsAffected = preparedStatement.executeUpdate();
 
         System.out.println("Deleted " + rowsAffected + " rows from the employees table.");
+    }
+
+    private static void exportDataToFile(Product product) {
+        // Код для экспорта данных из JTable в файл с названием tableName
+        try (FileWriter writer = new FileWriter(product.getName() + product.getId() + ".csv")) {
+            writer.write(product.getName() + "\n");
+            writer.write(product.getQuantity() + "\n");
+            writer.write(product.getPrice() + "\n");
+            JOptionPane.showMessageDialog(null,
+                    "Данные успешно экспортированы в файл " + product.getName() + product.getId() + ".csv");
+        } catch (IOException ex) {
+            ex.printStackTrace();
+            JOptionPane.showMessageDialog(null, "Ошибка при экспорте данных: " + ex.getMessage()
+                    , "Ошибка", JOptionPane.ERROR_MESSAGE);
+        }
     }
 
     private void supplierAdd() throws SQLException {
