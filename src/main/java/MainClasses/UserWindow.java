@@ -9,6 +9,7 @@ import org.example.Entity.User;
 import javax.swing.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.math.BigDecimal;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.List;
@@ -51,6 +52,8 @@ public class UserWindow extends JFrame {
             cart.setModel(cartModel);
             DecimalFormat df = new DecimalFormat("#.##");
             hibernateUtil.createRequisitionFromCart(productList, user, Double.parseDouble(total.getText().replace(",", ".")));
+            total.setText("");
+            JOptionPane.showMessageDialog(panel1, "Заявка успешно сформирована", "Заявка", JOptionPane.PLAIN_MESSAGE);
         });
     }
 
@@ -135,6 +138,7 @@ public class UserWindow extends JFrame {
             ProductCert p = cartModel.getElementAt(i);
             totalPrice += p.getProduct().getPrice() * p.getProductInfo().getQuantity();
         }
-        total.setText(String.valueOf(totalPrice));
+        BigDecimal bd = new BigDecimal(totalPrice).setScale(2, BigDecimal.ROUND_HALF_UP);
+        total.setText(String.valueOf(bd.doubleValue()));
     }
 }

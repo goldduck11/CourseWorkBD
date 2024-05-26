@@ -338,6 +338,7 @@ public class AdminWindow extends JFrame {
         if (!rs.next()) {
             JOptionPane.showMessageDialog(AdminWindow.this, "Данные заказа не найдены!");
         }
+        Long requisitionId = rs.getLong("requisition_id");
         Long product_id = rs.getLong("product_id");
         Long quantity = rs.getLong("quantity");
         Double price = rs.getDouble("price");
@@ -405,10 +406,12 @@ public class AdminWindow extends JFrame {
                 if (row > 0) {
                     JOptionPane.showMessageDialog(panel, "Отпуск отвара был произведён успешно");
                 }
-            } else if (result == JOptionPane.CANCEL_OPTION) {
+            } else if (result == 1) {
                 int row = MyConnection.getStatement()
                         .executeUpdate("UPDATE public.requisition SET status = '"
                                 + RequisitionStatus.CANCELED + "' WHERE id = '" + item + "'");
+                HibernateUtil hibernateUtil = new HibernateUtil();
+                hibernateUtil.cancelRequisition(requisitionId);
                 if (row > 0) {
                     JOptionPane.showMessageDialog(panel, "Отпуск товара был отменён");
                 }
