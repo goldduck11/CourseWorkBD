@@ -432,6 +432,8 @@ public class AdminWindow extends JFrame {
         // Execute the delete statement
         int rowsAffected = preparedStatement.executeUpdate();
 
+        JOptionPane.showMessageDialog(null, "Товар успешно удалён");
+
         System.out.println("Deleted " + rowsAffected + " rows from the employees table.");
     }
 

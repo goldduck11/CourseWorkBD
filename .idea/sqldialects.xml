@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
+  <component name="SqlDialectMappings">
+    <file url="file://$USER_HOME$/OneDrive/Рабочий стол/backup.sql" dialect="PostgreSQL" />
+  </component>
   <component name="SqlResolveMappings">
     <file url="file://$PROJECT_DIR$/src/main/java/MainClasses/AdminWindow.java" scope="{&quot;node&quot;:{  &quot;@negative&quot;:&quot;1&quot;,  &quot;group&quot;:{   &quot;@kind&quot;:&quot;root&quot;,   &quot;node&quot;:{    &quot;name&quot;:{     &quot;@qname&quot;:&quot;0546ee7e-7cdb-4984-b5ae-14933f4c4cb1&quot;    }   }  } }}" />
     <file url="file://$PROJECT_DIR$/src/main/java/StartPages/LoginPage.java" scope="{&quot;node&quot;:{  &quot;@negative&quot;:&quot;1&quot;,  &quot;group&quot;:{   &quot;@kind&quot;:&quot;root&quot;,   &quot;node&quot;:{    &quot;name&quot;:{     &quot;@qname&quot;:&quot;0546ee7e-7cdb-4984-b5ae-14933f4c4cb1&quot;    },    &quot;group&quot;:{     &quot;@kind&quot;:&quot;database&quot;,     &quot;node&quot;:{      &quot;name&quot;:{       &quot;@qname&quot;:&quot;postgres&quot;      },      &quot;group&quot;:{       &quot;@kind&quot;:&quot;schema&quot;,       &quot;node&quot;:{        &quot;name&quot;:{         &quot;@qname&quot;:&quot;public&quot;        }       }      }     }    }   }  } }}" />
